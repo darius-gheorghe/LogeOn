@@ -1,5 +1,9 @@
 package com.sapphyx.logeon.di
 
+import com.google.firebase.auth.FirebaseAuth
+import com.sapphyx.logeon.data.repository.AuthenticationRepository
+import com.sapphyx.logeon.data.repository.util.authentication.EmailValidator
+import com.sapphyx.logeon.data.repository.util.authentication.PasswordValidator
 import com.sapphyx.logeon.navigation.NavigationManager
 import dagger.Module
 import dagger.Provides
@@ -14,4 +18,24 @@ class AppModule {
     @Provides
     @Singleton
     fun provideNavigationManager(): NavigationManager = NavigationManager()
+
+    @Provides
+    @Singleton
+    fun provideEmailValidator(): EmailValidator = EmailValidator()
+
+    @Provides
+    @Singleton
+    fun providePasswordValidator(): PasswordValidator = PasswordValidator()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideAuthenticationRepository(
+        firebaseAuth: FirebaseAuth,
+        emailValidator: EmailValidator,
+        passwordValidator: PasswordValidator
+    ) = AuthenticationRepository(firebaseAuth, emailValidator, passwordValidator)
 }

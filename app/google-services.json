@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "238338429949",
+    "project_id": "logeon-app",
+    "storage_bucket": "logeon-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:238338429949:android:0a16cb37359bb85cf0bf94",
+        "android_client_info": {
+          "package_name": "com.sapphyx.logeon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4TrmM-Z3_o3enIDo3rHxDKDaaMyUfSws"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
