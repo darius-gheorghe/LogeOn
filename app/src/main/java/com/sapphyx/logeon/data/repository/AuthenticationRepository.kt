@@ -96,8 +96,8 @@ class AuthenticationRepository @Inject constructor(
     }
 
     private companion object {
-        const val CREATE_ACCOUNT_DEFAULT_ERROR = "Create account with email error"
-        const val LOGIN_DEFAULT_ERROR = "Sign in with email error"
+        const val CREATE_ACCOUNT_DEFAULT_ERROR = "Create account with email - default error"
+        const val LOGIN_DEFAULT_ERROR = "Sign in with email - default error"
     }
 }
 
