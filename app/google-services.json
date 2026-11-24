@@ -12,7 +12,20 @@
           "package_name": "com.sapphyx.logeon"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "238338429949-scmtshvt323l6b3nml5d0pt5tpvr1n48.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sapphyx.logeon",
+            "certificate_hash": "5e6b2fb975b7c7df9406fdeb18c83570f6e28dd6"
+          }
+        },
+        {
+          "client_id": "238338429949-16usgefgo7tbp84dohckael25rsc1io5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyB4TrmM-Z3_o3enIDo3rHxDKDaaMyUfSws"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "238338429949-16usgefgo7tbp84dohckael25rsc1io5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
