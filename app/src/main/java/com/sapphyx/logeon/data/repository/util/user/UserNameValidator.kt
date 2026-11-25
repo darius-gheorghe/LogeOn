@@ -1,4 +1,4 @@
-package com.sapphyx.logeon.data.repository.util.authentication
+package com.sapphyx.logeon.data.repository.util.user
 
 class UserNameValidator {
     operator fun invoke(userName: String): UserNameValidationResult {

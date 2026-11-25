@@ -63,6 +63,7 @@ dependencies {
 
     //compose dependencies
     implementation("androidx.compose.material:material-icons-core:1.7.8")
+    implementation("androidx.compose.material:material-icons-extended")
 
     //firebase dependencies
     implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
