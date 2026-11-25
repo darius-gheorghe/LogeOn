@@ -12,6 +12,11 @@ enum class LogeOnDestinations(
     val hasBottomNavigation: Boolean,
     val content: @Composable () -> Unit
 ) {
+    Login(
+        route = DestinationRoutes.LOGIN_ROUTE,
+        hasBottomNavigation = false,
+        content = {}
+    ),
     SignUp(
         route = DestinationRoutes.SIGNUP_ROUTE,
         hasBottomNavigation = false,
@@ -19,11 +24,6 @@ enum class LogeOnDestinations(
     ),
     VerifyEmail(
         route = DestinationRoutes.VERIFY_EMAIL_ROUTE,
-        hasBottomNavigation = false,
-        content = {}
-    ),
-    Login(
-        route = DestinationRoutes.LOGIN_ROUTE,
         hasBottomNavigation = false,
         content = {}
     ),
