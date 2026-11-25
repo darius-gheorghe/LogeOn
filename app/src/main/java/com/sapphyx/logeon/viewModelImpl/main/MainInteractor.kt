@@ -1,5 +1,6 @@
 package com.sapphyx.logeon.viewModelImpl.main
 
+import com.sapphyx.logeon.data.repository.AuthStatus
 import com.sapphyx.logeon.data.repository.AuthenticationRepository
 import com.sapphyx.logeon.navigation.NavigationCommands
 import com.sapphyx.logeon.navigation.NavigationManager
@@ -23,10 +24,11 @@ class MainInteractor @Inject constructor(
     }
 
     override fun initResults(): Flow<MainScreenResult> {
-        val userFlow: Flow<MainScreenResult> = authRepository.observeAuthState().map {
-            when (it) {
-                true -> MainScreenResult.LoggedIn
-                false -> MainScreenResult.NotLoggedIn
+        val userFlow: Flow<MainScreenResult> = authRepository.observeAuthState().map { status ->
+            when (status) {
+                is AuthStatus.Verified -> MainScreenResult.LoggedIn
+                is AuthStatus.UnverifiedEmail -> MainScreenResult.UnverifiedEmail
+                is AuthStatus.LoggedOut -> MainScreenResult.NotLoggedIn
             }
         }
 

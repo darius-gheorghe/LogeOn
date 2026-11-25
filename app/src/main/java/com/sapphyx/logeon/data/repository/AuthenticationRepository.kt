@@ -24,9 +24,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.security.MessageDigest
@@ -45,26 +48,61 @@ class AuthenticationRepository @Inject constructor(
     val currentUser: FirebaseUser?
         get() = auth.currentUser
 
-    fun isUserLoggedIn(): Boolean = currentUser != null
+    private val _manualRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    fun observeAuthState(): Flow<Boolean> = callbackFlow {
-        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-            trySend(firebaseAuth.currentUser != null)
+    private fun getCurrentAuthStatus(): AuthStatus = when (currentUser?.isEmailVerified) {
+        null -> AuthStatus.LoggedOut
+        false -> AuthStatus.UnverifiedEmail
+        true -> AuthStatus.Verified
+    }
+
+    fun observeAuthState(): Flow<AuthStatus> {
+        val firebaseAuthFlow = callbackFlow {
+            val listener = FirebaseAuth.AuthStateListener {
+                trySend(getCurrentAuthStatus())
+            }
+            auth.addAuthStateListener(listener)
+            awaitClose { auth.removeAuthStateListener(listener) }
         }
 
-        auth.addAuthStateListener(listener)
-
-        awaitClose {
-            auth.removeAuthStateListener(listener)
+        val manualRefreshFlow = _manualRefreshTrigger.map {
+            getCurrentAuthStatus()
         }
-    }.distinctUntilChanged()
+
+        return merge(firebaseAuthFlow, manualRefreshFlow)
+            .distinctUntilChanged()
+    }
 
     fun createAccountWithEmailAndPassword(
         email: String, password: String
     ): Flow<AuthResponse> = executeAuthAction(
         email = email, password = password, defaultError = CREATE_ACCOUNT_DEFAULT_ERROR
     ) {
-        auth.createUserWithEmailAndPassword(email, password).await()
+        val result = auth.createUserWithEmailAndPassword(email, password).await()
+        //Sending verification email after creating account with email and password
+        result.user?.sendEmailVerification()?.await()
+    }
+
+    suspend fun resendVerificationEmail(): Result<Unit> = try {
+        currentUser?.sendEmailVerification()?.await()
+        Result.success(Unit)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    suspend fun checkEmailVerified(): Boolean = try {
+        currentUser?.reload()?.await()
+        val isVerified = currentUser?.isEmailVerified == true
+        if (isVerified) {
+            _manualRefreshTrigger.tryEmit(Unit)
+        }
+        isVerified
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        false
     }
 
     fun loginWithEmailAndPassword(
@@ -205,6 +243,12 @@ class AuthenticationRepository @Inject constructor(
         const val LOG_SIGN_OUT_EXCEPTION_TAG = "Sign out Exception"
         const val LOG_SIGN_OUT_EXCEPTION_MESSAGE = "Exception at signOut method in AuthRepository()"
     }
+}
+
+sealed interface AuthStatus {
+    data object LoggedOut : AuthStatus
+    data object UnverifiedEmail : AuthStatus
+    data object Verified : AuthStatus
 }
 
 sealed interface AuthResponse {

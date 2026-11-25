@@ -54,10 +54,10 @@ object MainScreen :
     ) {
         val navController = rememberNavController()
 
-        val startRoute = if (state is MainScreenState.LoggedIn) {
-            LogeOnDestinations.Home.route
-        } else {
-            LogeOnDestinations.Login.route
+        val startRoute = when (state) {
+            is MainScreenState.LoggedIn -> LogeOnDestinations.Home.route
+            is MainScreenState.UnverifiedEmail -> LogeOnDestinations.VerifyEmail.route
+            else -> LogeOnDestinations.Login.route
         }
 
         LogeOnNavHost(

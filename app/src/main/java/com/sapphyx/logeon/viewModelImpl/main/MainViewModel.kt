@@ -18,14 +18,21 @@ class MainViewModel @Inject constructor(interactor: MainInteractor) :
     ): MainScreenState {
         return when (result) {
             is MainScreenResult.LoggedIn -> {
-                if (previousState is MainScreenState.NotLoggedIn) {
+                if (previousState !is MainScreenState.Loading && previousState !is MainScreenState.LoggedIn) {
                     emitEffect(MainScreenEffect.AuthNavigation(LogeOnDestinations.Home.route))
                 }
                 MainScreenState.LoggedIn
             }
 
+            is MainScreenResult.UnverifiedEmail -> {
+                if (previousState !is MainScreenState.Loading && previousState !is MainScreenState.UnverifiedEmail) {
+                    emitEffect(MainScreenEffect.AuthNavigation(LogeOnDestinations.VerifyEmail.route))
+                }
+                MainScreenState.UnverifiedEmail
+            }
+
             is MainScreenResult.NotLoggedIn -> {
-                if (previousState is MainScreenState.LoggedIn) {
+                if (previousState !is MainScreenState.Loading && previousState !is MainScreenState.NotLoggedIn) {
                     emitEffect(MainScreenEffect.AuthNavigation(LogeOnDestinations.Login.route))
                 }
                 MainScreenState.NotLoggedIn
@@ -52,6 +59,7 @@ class MainViewModel @Inject constructor(interactor: MainInteractor) :
 sealed interface MainScreenState {
     data object Loading : MainScreenState
     data object LoggedIn : MainScreenState
+    data object UnverifiedEmail : MainScreenState
     data object NotLoggedIn : MainScreenState
 }
 
@@ -68,6 +76,7 @@ sealed interface MainScreenEffect {
 
 sealed interface MainScreenResult {
     data object LoggedIn : MainScreenResult
+    data object UnverifiedEmail : MainScreenResult
     data object NotLoggedIn : MainScreenResult
     data class NavigateWithDestination(val destination: LogeOnDestinations) : MainScreenResult
     data class NavigateWithNavBar(val route: String) : MainScreenResult
