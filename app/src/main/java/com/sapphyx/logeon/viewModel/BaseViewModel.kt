@@ -26,7 +26,7 @@ abstract class BaseViewModel<STATE, ACTION, EFFECT, RESULT>(
 ) : IBaseViewModel<STATE, ACTION, EFFECT>,
     ViewModel() {
 
-    private val _effect: MutableSharedFlow<EFFECT> = MutableSharedFlow()
+    private val _effect: MutableSharedFlow<EFFECT> = MutableSharedFlow(extraBufferCapacity = 64)
     private val _actionToResultFlow: MutableSharedFlow<RESULT> = MutableSharedFlow()
 
     abstract suspend fun handleResult(previousState: STATE, result: RESULT): STATE
@@ -44,7 +44,7 @@ abstract class BaseViewModel<STATE, ACTION, EFFECT, RESULT>(
         }
     }
 
-    suspend fun emmitEffect(effect: EFFECT) {
+    suspend fun emitEffect(effect: EFFECT) {
         _effect.emit(effect)
     }
 }

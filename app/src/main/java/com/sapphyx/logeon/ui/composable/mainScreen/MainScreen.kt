@@ -1,7 +1,12 @@
 package com.sapphyx.logeon.ui.composable.mainScreen
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.sapphyx.logeon.navigation.LogeOnDestinations
 import com.sapphyx.logeon.ui.composable.baseScreen.BaseScreen
@@ -21,11 +26,38 @@ object MainScreen :
         effect: SharedFlow<MainScreenEffect>,
         processUiAction: (action: MainScreenAction) -> Unit
     ) {
+        when (state) {
+            is MainScreenState.Loading -> LoadingScreen()
+            else -> LoadingCompletedScreen(
+                state = state,
+                effect = effect,
+                processUiAction = processUiAction
+            )
+        }
+    }
+
+    @Composable
+    private fun LoadingScreen() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+
+    @Composable
+    private fun LoadingCompletedScreen(
+        state: MainScreenState,
+        effect: SharedFlow<MainScreenEffect>,
+        processUiAction: (action: MainScreenAction) -> Unit
+    ) {
         val navController = rememberNavController()
 
-        val startRoute = when(state) {
-            is MainScreenState.Initial -> LogeOnDestinations.Main.route
-            is MainScreenState.Loaded -> LogeOnDestinations.Home.route
+        val startRoute = if (state is MainScreenState.LoggedIn) {
+            LogeOnDestinations.Home.route
+        } else {
+            LogeOnDestinations.Login.route
         }
 
         LogeOnNavHost(
@@ -38,14 +70,20 @@ object MainScreen :
 
         LaunchedEffect(Unit) {
             effect.collect {
-                when(it) {
+                when (it) {
+                    is MainScreenEffect.AuthNavigation -> {
+                        navController.navigate(it.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+
                     is MainScreenEffect.NavigateWithDestination -> {
                         navController.popBackStack(it.route, inclusive = true)
                         navController.navigate(it.route)
                     }
 
                     is MainScreenEffect.NavigateWithNavBar -> {
-                        when(it.route) {
+                        when (it.route) {
                             LogeOnDestinations.Home.route -> {
                                 navController.popBackStack()
                             }

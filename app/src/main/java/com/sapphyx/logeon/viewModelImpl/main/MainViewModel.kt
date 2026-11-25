@@ -9,7 +9,7 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(interactor: MainInteractor) :
     BaseViewModel<MainScreenState, MainScreenAction, MainScreenEffect, MainScreenResult>(
         interactor = interactor,
-        initialUiState = MainScreenState.Initial
+        initialUiState = MainScreenState.Loading
     ) {
 
     override suspend fun handleResult(
@@ -17,22 +17,32 @@ class MainViewModel @Inject constructor(interactor: MainInteractor) :
         result: MainScreenResult
     ): MainScreenState {
         return when (result) {
-            is MainScreenResult.Loaded -> {
-                MainScreenState.Loaded
+            is MainScreenResult.LoggedIn -> {
+                if (previousState is MainScreenState.NotLoggedIn) {
+                    emitEffect(MainScreenEffect.AuthNavigation(LogeOnDestinations.Home.route))
+                }
+                MainScreenState.LoggedIn
+            }
+
+            is MainScreenResult.NotLoggedIn -> {
+                if (previousState is MainScreenState.LoggedIn) {
+                    emitEffect(MainScreenEffect.AuthNavigation(LogeOnDestinations.Login.route))
+                }
+                MainScreenState.NotLoggedIn
             }
 
             is MainScreenResult.NavigateWithDestination -> {
-                emmitEffect(MainScreenEffect.NavigateWithDestination(result.destination.route))
+                emitEffect(MainScreenEffect.NavigateWithDestination(result.destination.route))
                 previousState
             }
 
             is MainScreenResult.NavigateWithNavBar -> {
-                emmitEffect(MainScreenEffect.NavigateWithNavBar(result.route))
+                emitEffect(MainScreenEffect.NavigateWithNavBar(result.route))
                 previousState
             }
 
             is MainScreenResult.PopBack -> {
-                emmitEffect(MainScreenEffect.PopBack)
+                emitEffect(MainScreenEffect.PopBack)
                 previousState
             }
         }
@@ -40,9 +50,9 @@ class MainViewModel @Inject constructor(interactor: MainInteractor) :
 }
 
 sealed interface MainScreenState {
-    object Initial : MainScreenState
-
-    object Loaded : MainScreenState
+    data object Loading : MainScreenState
+    data object LoggedIn : MainScreenState
+    data object NotLoggedIn : MainScreenState
 }
 
 sealed interface MainScreenAction {
@@ -50,14 +60,16 @@ sealed interface MainScreenAction {
 }
 
 sealed interface MainScreenEffect {
+    data class AuthNavigation(val route: String) : MainScreenEffect
     data class NavigateWithDestination(val route: String) : MainScreenEffect
     data class NavigateWithNavBar(val route: String) : MainScreenEffect
-    object PopBack : MainScreenEffect
+    data object PopBack : MainScreenEffect
 }
 
 sealed interface MainScreenResult {
-    object Loaded : MainScreenResult
+    data object LoggedIn : MainScreenResult
+    data object NotLoggedIn : MainScreenResult
     data class NavigateWithDestination(val destination: LogeOnDestinations) : MainScreenResult
     data class NavigateWithNavBar(val route: String) : MainScreenResult
-    object PopBack : MainScreenResult
+    data object PopBack : MainScreenResult
 }
