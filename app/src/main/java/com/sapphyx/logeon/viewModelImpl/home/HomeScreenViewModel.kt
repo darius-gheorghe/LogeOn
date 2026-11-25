@@ -22,7 +22,7 @@ class HomeScreenViewModel @Inject constructor(
 }
 
 sealed interface HomeScreenState {
-    object Initial : HomeScreenState
+    data object Initial : HomeScreenState
 }
 
 sealed interface HomeScreenAction {

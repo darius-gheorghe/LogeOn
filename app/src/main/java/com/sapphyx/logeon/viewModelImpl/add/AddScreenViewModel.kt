@@ -22,7 +22,7 @@ class AddScreenViewModel @Inject constructor(
 }
 
 sealed interface AddScreenState {
-    object Initial : AddScreenState
+    data object Initial : AddScreenState
 }
 
 sealed interface AddScreenAction {

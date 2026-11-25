@@ -22,7 +22,7 @@ class PulseScreenViewModel @Inject constructor(
 }
 
 sealed interface PulseScreenState {
-    object Initial : PulseScreenState
+    data object Initial : PulseScreenState
 }
 
 sealed interface PulseScreenAction {

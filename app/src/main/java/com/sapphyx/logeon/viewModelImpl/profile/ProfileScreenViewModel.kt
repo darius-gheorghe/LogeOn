@@ -22,7 +22,7 @@ class ProfileScreenViewModel @Inject constructor(
 }
 
 sealed interface ProfileScreenState {
-    object Initial : ProfileScreenState
+    data object Initial : ProfileScreenState
 }
 
 sealed interface ProfileScreenAction {
