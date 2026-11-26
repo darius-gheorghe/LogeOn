@@ -50,12 +50,6 @@ class AuthenticationRepository @Inject constructor(
 
     private val _manualRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    private fun getCurrentAuthStatus(): AuthStatus = when (currentUser?.isEmailVerified) {
-        null -> AuthStatus.LoggedOut
-        false -> AuthStatus.UnverifiedEmail
-        true -> AuthStatus.Verified
-    }
-
     fun observeAuthState(): Flow<AuthStatus> {
         val firebaseAuthFlow = callbackFlow {
             val listener = FirebaseAuth.AuthStateListener {
@@ -73,42 +67,6 @@ class AuthenticationRepository @Inject constructor(
             .distinctUntilChanged()
     }
 
-    fun createAccountWithEmailAndPassword(
-        email: String, password: String
-    ): Flow<AuthResponse> = executeAuthAction(
-        email = email,
-        password = password,
-        defaultError = CREATE_ACCOUNT_DEFAULT_ERROR,
-        validatePassword = passwordValidator::invoke
-    ) {
-        val result = auth.createUserWithEmailAndPassword(email, password).await()
-        //Sending verification email after creating account with email and password
-        result.user?.sendEmailVerification()?.await()
-    }
-
-    suspend fun resendVerificationEmail(): Result<Unit> = try {
-        currentUser?.sendEmailVerification()?.await()
-        Result.success(Unit)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
-
-    suspend fun checkEmailVerified(): Boolean = try {
-        currentUser?.reload()?.await()
-        val isVerified = currentUser?.isEmailVerified == true
-        if (isVerified) {
-            _manualRefreshTrigger.tryEmit(Unit)
-        }
-        isVerified
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Log.e(LOG_TAG, LOG_CHECK_EMAIL_VERIFIED_EXCEPTION_MESSAGE, e)
-        false
-    }
-
     fun loginWithEmailAndPassword(
         email: String, password: String
     ): Flow<AuthResponse> = executeAuthAction(
@@ -116,51 +74,21 @@ class AuthenticationRepository @Inject constructor(
         password = password,
         defaultError = LOGIN_DEFAULT_ERROR,
         validatePassword = passwordValidator::validateForLogin
-    ) {
-        auth.signInWithEmailAndPassword(email, password).await()
+    ) { trimmedEmail ->
+        auth.signInWithEmailAndPassword(trimmedEmail, password).await()
     }
 
-    private fun executeAuthAction(
-        email: String,
-        password: String,
-        defaultError: String,
-        validatePassword: (String) -> PasswordValidationResult,
-        authCall: suspend () -> Unit
-    ): Flow<AuthResponse> = flow {
-        val emailResult = emailValidator(email)
-        if (emailResult != EmailValidationResult.CORRECT) {
-            emit(AuthResponse.EmailValidationError(emailResult))
-            return@flow
-        }
-
-        val passwordResult = validatePassword(password)
-        if (passwordResult != PasswordValidationResult.CORRECT) {
-            emit(AuthResponse.PasswordValidationError(passwordResult))
-            return@flow
-        }
-
-        emit(AuthResponse.Loading)
-
-        val response = try {
-            authCall()
-            AuthResponse.Success
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AuthResponse.Error(e.message ?: defaultError)
-        }
-        emit(response)
-    }
-
-    private fun createNonce(): String {
-        val rawNonce = UUID.randomUUID()
-        val bytes = rawNonce.toString().toByteArray()
-        val md = MessageDigest.getInstance(ENCRYPTION_ALGORITHM)
-        val digest = md.digest(bytes)
-
-        return digest.fold(INITIAL_FOLD) { str, it ->
-            str + DIGEST_FORMAT.format(it)
-        }
+    fun createAccountWithEmailAndPassword(
+        email: String, password: String
+    ): Flow<AuthResponse> = executeAuthAction(
+        email = email,
+        password = password,
+        defaultError = CREATE_ACCOUNT_DEFAULT_ERROR,
+        validatePassword = passwordValidator::invoke
+    ) { trimmedEmail ->
+        val result = auth.createUserWithEmailAndPassword(trimmedEmail, password).await()
+        //Sending verification email after creating account with email and password
+        result.user?.sendEmailVerification()?.await()
     }
 
     fun signInWithGoogle(context: Context): Flow<AuthResponse> = flow {
@@ -223,10 +151,49 @@ class AuthenticationRepository @Inject constructor(
         emit(response)
     }
 
-    private tailrec fun Context.findActivity(): Activity? = when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
+    suspend fun resendVerificationEmail(): Result<Unit> = try {
+        currentUser?.sendEmailVerification()?.await()
+        Result.success(Unit)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    suspend fun checkEmailVerified(): Boolean = try {
+        currentUser?.reload()?.await()
+        val isVerified = currentUser?.isEmailVerified == true
+        if (isVerified) {
+            _manualRefreshTrigger.tryEmit(Unit)
+        }
+        isVerified
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.e(LOG_TAG, LOG_CHECK_EMAIL_VERIFIED_EXCEPTION_MESSAGE, e)
+        false
+    }
+
+    fun sendPasswordResetEmail(email: String): Flow<AuthResponse> = flow {
+        val trimmedEmail = email.trim()
+        val emailResult = emailValidator(trimmedEmail)
+        if (emailResult != EmailValidationResult.CORRECT) {
+            emit(AuthResponse.EmailValidationError(emailResult))
+            return@flow
+        }
+
+        emit(AuthResponse.Loading)
+
+        val response = try {
+            auth.sendPasswordResetEmail(trimmedEmail).await()
+            AuthResponse.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, LOG_PASSWORD_RESET_EXCEPTION_MESSAGE, e)
+            AuthResponse.Error(e.message ?: PASSWORD_RESET_DEFAULT_ERROR)
+        }
+        emit(response)
     }
 
     fun signOut() {
@@ -244,6 +211,62 @@ class AuthenticationRepository @Inject constructor(
         }
     }
 
+    private fun getCurrentAuthStatus(): AuthStatus = when (currentUser?.isEmailVerified) {
+        null -> AuthStatus.LoggedOut
+        false -> AuthStatus.UnverifiedEmail
+        true -> AuthStatus.Verified
+    }
+
+    private fun executeAuthAction(
+        email: String,
+        password: String,
+        defaultError: String,
+        validatePassword: (String) -> PasswordValidationResult,
+        authCall: suspend (trimmedEmail: String) -> Unit
+    ): Flow<AuthResponse> = flow {
+        val trimmedEmail = email.trim()
+        val emailResult = emailValidator(trimmedEmail)
+        if (emailResult != EmailValidationResult.CORRECT) {
+            emit(AuthResponse.EmailValidationError(emailResult))
+            return@flow
+        }
+
+        val passwordResult = validatePassword(password)
+        if (passwordResult != PasswordValidationResult.CORRECT) {
+            emit(AuthResponse.PasswordValidationError(passwordResult))
+            return@flow
+        }
+
+        emit(AuthResponse.Loading)
+
+        val response = try {
+            authCall(trimmedEmail)
+            AuthResponse.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AuthResponse.Error(e.message ?: defaultError)
+        }
+        emit(response)
+    }
+
+    private fun createNonce(): String {
+        val rawNonce = UUID.randomUUID()
+        val bytes = rawNonce.toString().toByteArray()
+        val md = MessageDigest.getInstance(ENCRYPTION_ALGORITHM)
+        val digest = md.digest(bytes)
+
+        return digest.fold(INITIAL_FOLD) { str, it ->
+            str + DIGEST_FORMAT.format(it)
+        }
+    }
+
+    private tailrec fun Context.findActivity(): Activity? = when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
+
     private companion object {
         const val CREATE_ACCOUNT_DEFAULT_ERROR = "Create account with email - default error"
         const val LOGIN_DEFAULT_ERROR = "Sign in with email - default error"
@@ -257,6 +280,10 @@ class AuthenticationRepository @Inject constructor(
         const val LOG_CHECK_EMAIL_VERIFIED_EXCEPTION_MESSAGE = "Check email verified exception"
         const val LOG_CREDENTIAL_CANCELLATION_EXCEPTION_MESSAGE =
             "Credential cancellation exception"
+
+        const val PASSWORD_RESET_DEFAULT_ERROR = "Send password reset email - default error"
+        const val LOG_PASSWORD_RESET_EXCEPTION_MESSAGE = "Send password reset email exception"
+
     }
 }
 
