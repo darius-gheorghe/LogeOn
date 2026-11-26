@@ -17,4 +17,14 @@
     <string name="error_password_no_lowercase">Password must contain at least one lowercase letter</string>
     <string name="error_password_no_digit">Password must contain at least one number</string>
     <string name="error_password_no_special_char">Password must contain at least one special character</string>
+
+    <!-- Authentication -->
+    <string name="login_screen_headline">Welcome Back</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
+    <string name="login_screen_sign_in">Sign In</string>
+    <string name="login_screen_continue_with_google">Continue with Google</string>
+    <string name="login_screen_sign_up">Don\'t have an account? Sign Up</string>
 </resources>
