@@ -4,4 +4,17 @@
     <string name="pulse">Pulse</string>
     <string name="add">Add</string>
     <string name="profile">Profile</string>
+
+    <!-- Email validation errors -->
+    <string name="error_email_empty">Email address cannot be empty</string>
+    <string name="error_email_invalid_format">Please enter a valid email address</string>
+
+    <!-- Password validation errors -->
+    <string name="error_password_empty">Password cannot be empty</string>
+    <string name="error_password_contains_whitespace">Password cannot contain spaces</string>
+    <string name="error_password_too_short">Password must be at least 8 characters long</string>
+    <string name="error_password_no_uppercase">Password must contain at least one uppercase letter</string>
+    <string name="error_password_no_lowercase">Password must contain at least one lowercase letter</string>
+    <string name="error_password_no_digit">Password must contain at least one number</string>
+    <string name="error_password_no_special_char">Password must contain at least one special character</string>
 </resources>

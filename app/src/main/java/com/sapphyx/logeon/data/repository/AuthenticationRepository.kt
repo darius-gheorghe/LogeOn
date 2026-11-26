@@ -76,7 +76,10 @@ class AuthenticationRepository @Inject constructor(
     fun createAccountWithEmailAndPassword(
         email: String, password: String
     ): Flow<AuthResponse> = executeAuthAction(
-        email = email, password = password, defaultError = CREATE_ACCOUNT_DEFAULT_ERROR
+        email = email,
+        password = password,
+        defaultError = CREATE_ACCOUNT_DEFAULT_ERROR,
+        validatePassword = passwordValidator::invoke
     ) {
         val result = auth.createUserWithEmailAndPassword(email, password).await()
         //Sending verification email after creating account with email and password
@@ -108,13 +111,20 @@ class AuthenticationRepository @Inject constructor(
     fun loginWithEmailAndPassword(
         email: String, password: String
     ): Flow<AuthResponse> = executeAuthAction(
-        email = email, password = password, defaultError = LOGIN_DEFAULT_ERROR
+        email = email,
+        password = password,
+        defaultError = LOGIN_DEFAULT_ERROR,
+        validatePassword = passwordValidator::validateForLogin
     ) {
         auth.signInWithEmailAndPassword(email, password).await()
     }
 
     private fun executeAuthAction(
-        email: String, password: String, defaultError: String, authCall: suspend () -> Unit
+        email: String,
+        password: String,
+        defaultError: String,
+        validatePassword: (String) -> PasswordValidationResult,
+        authCall: suspend () -> Unit
     ): Flow<AuthResponse> = flow {
         val emailResult = emailValidator(email)
         if (emailResult != EmailValidationResult.CORRECT) {
@@ -122,7 +132,7 @@ class AuthenticationRepository @Inject constructor(
             return@flow
         }
 
-        val passwordResult = passwordValidator(password)
+        val passwordResult = validatePassword(password)
         if (passwordResult != PasswordValidationResult.CORRECT) {
             emit(AuthResponse.PasswordValidationError(passwordResult))
             return@flow

@@ -16,6 +16,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.sapphyx.logeon.ui.composable.baseScreen.BaseScreen
+import com.sapphyx.logeon.ui.util.toErrorMessage
+import com.sapphyx.logeon.ui.util.toLoginErrorMessage
 import com.sapphyx.logeon.viewModelImpl.login.LoginScreenAction
 import com.sapphyx.logeon.viewModelImpl.login.LoginScreenEffect
 import com.sapphyx.logeon.viewModelImpl.login.LoginScreenState
@@ -53,8 +55,8 @@ object LoginScreen :
                 onValueChange = { processUiAction(LoginScreenAction.EmailChanged(it)) },
                 label = { Text("Email") },
                 isError = state.emailError != null,
-                supportingText = state.emailError?.let { error ->
-                    { Text(text = error.name) }
+                supportingText = state.emailError?.toErrorMessage()?.let { errorMessage ->
+                    { Text(text = errorMessage) }
                 },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -72,8 +74,8 @@ object LoginScreen :
                 onValueChange = { processUiAction(LoginScreenAction.PasswordChanged(it)) },
                 label = { Text("Password") },
                 isError = state.passwordError != null,
-                supportingText = state.passwordError?.let { error ->
-                    { Text(text = error.name) }
+                supportingText = state.passwordError?.toLoginErrorMessage()?.let { errorMessage ->
+                    { Text(text = errorMessage) }
                 },
                 visualTransformation = if (passwordVisible) {
                     VisualTransformation.None
@@ -81,7 +83,10 @@ object LoginScreen :
                     PasswordVisualTransformation()
                 },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        enabled = !state.isLoading,
+                        onClick = { passwordVisible = !passwordVisible },
+                    ) {
                         Icon(
                             imageVector = if (passwordVisible) {
                                 Icons.Default.VisibilityOff
