@@ -33,4 +33,14 @@
     <string name="signup_error_confirm_password_mismatch">Passwords do not match</string>
     <string name="signup_screen_create_account">Sign Up</string>
     <string name="signup_screen_back_to_login">Already have an account? Sign In</string>
+
+    <string name="verify_email_screen_headline">Verify Your Email</string>
+    <string name="verify_email_screen_subtitle">We\'ve sent a verification link to your email address. Please check your inbox and click the link to continue.</string>
+    <string name="verify_email_screen_subtitle_with_email">We\'ve sent a verification link to %1$s. Please check your inbox and click the link to continue.</string>
+    <string name="verify_email_screen_check_button">I\'ve Verified My Email</string>
+    <string name="verify_email_screen_resend_button">Resend Verification Email</string>
+    <string name="verify_email_screen_sign_out_button">Sign Out</string>
+    <string name="verify_email_screen_not_verified_yet">Your email is not verified yet. Please click the link in your inbox and try again.</string>
+    <string name="verify_email_screen_resend_success">Verification email sent! Please check your inbox.</string>
+    <string name="verify_email_screen_resend_error">Failed to resend verification email. Please try again later.</string>
 </resources>
