@@ -105,6 +105,7 @@ class AuthenticationRepository @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        Log.e(LOG_TAG, LOG_CHECK_EMAIL_VERIFIED_EXCEPTION_MESSAGE, e)
         false
     }
 
@@ -210,6 +211,7 @@ class AuthenticationRepository @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: GetCredentialCancellationException) {
+            Log.e(LOG_TAG, LOG_CREDENTIAL_CANCELLATION_EXCEPTION_MESSAGE, e)
             // User dismissed the bottom sheet
             AuthResponse.Cancelled
         } catch (e: GoogleIdTokenParsingException) {
@@ -237,7 +239,7 @@ class AuthenticationRepository @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.e(LOG_SIGN_OUT_EXCEPTION_TAG, LOG_SIGN_OUT_EXCEPTION_MESSAGE, e)
+                Log.e(LOG_TAG, LOG_SIGN_OUT_EXCEPTION_MESSAGE, e)
             }
         }
     }
@@ -250,8 +252,11 @@ class AuthenticationRepository @Inject constructor(
         const val ENCRYPTION_ALGORITHM = "SHA-256"
         const val INITIAL_FOLD = ""
         const val DIGEST_FORMAT = "%02x"
-        const val LOG_SIGN_OUT_EXCEPTION_TAG = "Sign out Exception"
+        const val LOG_TAG = "AuthenticationRepository"
         const val LOG_SIGN_OUT_EXCEPTION_MESSAGE = "Exception at signOut method in AuthRepository()"
+        const val LOG_CHECK_EMAIL_VERIFIED_EXCEPTION_MESSAGE = "Check email verified exception"
+        const val LOG_CREDENTIAL_CANCELLATION_EXCEPTION_MESSAGE =
+            "Credential cancellation exception"
     }
 }
 
