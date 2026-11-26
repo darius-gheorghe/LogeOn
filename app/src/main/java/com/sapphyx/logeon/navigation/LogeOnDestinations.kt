@@ -7,6 +7,7 @@ import com.sapphyx.logeon.ui.composable.screens.home.HomeScreen
 import com.sapphyx.logeon.ui.composable.screens.login.LoginScreen
 import com.sapphyx.logeon.ui.composable.screens.profile.ProfileScreen
 import com.sapphyx.logeon.ui.composable.screens.pulse.PulseScreen
+import com.sapphyx.logeon.ui.composable.screens.signUp.SignUpScreen
 
 enum class LogeOnDestinations(
     val route: String,
@@ -20,7 +21,7 @@ enum class LogeOnDestinations(
     SignUp(
         route = DestinationRoutes.SIGNUP_ROUTE,
         hasBottomNavigation = false,
-        content = {}),
+        content = { SignUpScreen.Content(hiltViewModel()) }),
     VerifyEmail(
         route = DestinationRoutes.VERIFY_EMAIL_ROUTE,
         hasBottomNavigation = false,

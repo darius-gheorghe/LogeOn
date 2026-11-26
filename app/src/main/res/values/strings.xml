@@ -27,4 +27,10 @@
     <string name="login_screen_sign_in">Sign In</string>
     <string name="login_screen_continue_with_google">Continue with Google</string>
     <string name="login_screen_sign_up">Don\'t have an account? Sign Up</string>
+
+    <string name="signup_screen_headline">Create Account</string>
+    <string name="signup_confirm_password_label">Confirm Password</string>
+    <string name="signup_error_confirm_password_mismatch">Passwords do not match</string>
+    <string name="signup_screen_create_account">Sign Up</string>
+    <string name="signup_screen_back_to_login">Already have an account? Sign In</string>
 </resources>
