@@ -43,4 +43,13 @@
     <string name="verify_email_screen_not_verified_yet">Your email is not verified yet. Please click the link in your inbox and try again.</string>
     <string name="verify_email_screen_resend_success">Verification email sent! Please check your inbox.</string>
     <string name="verify_email_screen_resend_error">Failed to resend verification email. Please try again later.</string>
+
+    <!-- Forgot Password -->
+    <string name="login_screen_forgot_password">Forgot Password?</string>
+    <string name="forgot_password_screen_headline">Reset Password</string>
+    <string name="forgot_password_screen_subtitle">Enter your email address and we\'ll send you a link to reset your password.</string>
+    <string name="forgot_password_screen_send_button">Send Reset Link</string>
+    <string name="forgot_password_screen_success_message">If an account exists for that email address, we\'ve sent a password reset link. Please check your inbox.</string>
+    <string name="forgot_password_screen_back_to_login">Back to Sign In</string>
+
 </resources>

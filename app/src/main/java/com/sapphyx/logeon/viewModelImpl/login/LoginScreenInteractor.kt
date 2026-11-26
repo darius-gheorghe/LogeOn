@@ -15,8 +15,11 @@ class LoginScreenInteractor @Inject constructor(
 
     override fun actionToResult(action: LoginScreenAction): Flow<LoginScreenResult> =
         when (action) {
-            is LoginScreenAction.EmailChanged -> flowOf(LoginScreenResult.EmailUpdated(action.email))
-            is LoginScreenAction.PasswordChanged -> flowOf(LoginScreenResult.PasswordUpdated(action.password))
+            is LoginScreenAction.EmailChanged ->
+                flowOf(LoginScreenResult.EmailUpdated(action.email))
+
+            is LoginScreenAction.PasswordChanged ->
+                flowOf(LoginScreenResult.PasswordUpdated(action.password))
 
             is LoginScreenAction.LoginClick -> authRepository
                 .loginWithEmailAndPassword(action.email, action.password)
@@ -26,7 +29,11 @@ class LoginScreenInteractor @Inject constructor(
                 .signInWithGoogle(action.context)
                 .mapToLoginScreenResult()
 
-            is LoginScreenAction.NavigateToSignUpClick -> flowOf(LoginScreenResult.NavigateToSignUpScreen)
+            is LoginScreenAction.NavigateToSignUpClick ->
+                flowOf(LoginScreenResult.NavigateToSignUpScreen)
+
+            is LoginScreenAction.NavigateToForgotPasswordClick ->
+                flowOf(LoginScreenResult.NavigateToForgotPasswordScreen)
         }
 
     override fun initResults(): Flow<LoginScreenResult> = emptyFlow()

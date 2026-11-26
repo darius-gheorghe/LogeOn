@@ -3,6 +3,7 @@ package com.sapphyx.logeon.navigation
 import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sapphyx.logeon.ui.composable.screens.add.AddScreen
+import com.sapphyx.logeon.ui.composable.screens.forgotPassword.ForgotPasswordScreen
 import com.sapphyx.logeon.ui.composable.screens.home.HomeScreen
 import com.sapphyx.logeon.ui.composable.screens.login.LoginScreen
 import com.sapphyx.logeon.ui.composable.screens.profile.ProfileScreen
@@ -27,6 +28,10 @@ enum class LogeOnDestinations(
         route = DestinationRoutes.VERIFY_EMAIL_ROUTE,
         hasBottomNavigation = false,
         content = { VerifyEmailScreen.Content(hiltViewModel()) }),
+    ForgotPassword(
+        route = DestinationRoutes.RESET_PASSWORD_ROUTE,
+        hasBottomNavigation = false,
+        content = { ForgotPasswordScreen.Content(hiltViewModel()) }),
     Home(
         route = DestinationRoutes.HOME_ROUTE,
         hasBottomNavigation = true,
@@ -46,9 +51,10 @@ enum class LogeOnDestinations(
 }
 
 private object DestinationRoutes {
+    const val LOGIN_ROUTE = "login"
     const val SIGNUP_ROUTE = "signup"
     const val VERIFY_EMAIL_ROUTE = "verify-email"
-    const val LOGIN_ROUTE = "login"
+    const val RESET_PASSWORD_ROUTE = "reset-password"
     const val HOME_ROUTE = "home"
     const val PULSE_ROUTE = "pulse"
     const val ADD_ROUTE = "add"

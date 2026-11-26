@@ -1,7 +1,9 @@
 package com.sapphyx.logeon.ui.composable.screens.login
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -25,6 +27,7 @@ import com.sapphyx.logeon.viewModelImpl.login.LoginScreenState
 import com.sapphyx.logeon.viewModelImpl.login.LoginScreenViewModel
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 
 object LoginScreen :
     BaseScreen<LoginScreenState, LoginScreenAction, LoginScreenEffect, LoginScreenViewModel>() {
@@ -38,6 +41,8 @@ object LoginScreen :
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -64,9 +69,14 @@ object LoginScreen :
                 processUiAction = processUiAction
             )
 
+            ForgotPasswordButton(
+                isLoading = state.isLoading,
+                processUiAction = processUiAction
+            )
+
             GeneralError(state.generalError)
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (state.isLoading) {
                 CircularProgressIndicator()
@@ -178,13 +188,32 @@ object LoginScreen :
     }
 
     @Composable
+    private fun ForgotPasswordButton(
+        isLoading: Boolean,
+        processUiAction: (action: LoginScreenAction) -> Unit
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            TextButton(
+                onClick = {
+                    processUiAction(LoginScreenAction.NavigateToForgotPasswordClick)
+                },
+                enabled = !isLoading,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Text(stringResource(R.string.login_screen_forgot_password))
+            }
+        }
+    }
+
+    @Composable
     private fun GeneralError(errorMessage: String?) {
         errorMessage?.let { message ->
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = message,
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
             )
         }
     }

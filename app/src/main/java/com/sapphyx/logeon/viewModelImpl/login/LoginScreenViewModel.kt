@@ -70,6 +70,11 @@ class LoginScreenViewModel @Inject constructor(
                 navigationManager.navigate(LogeOnDestinations.SignUp)
                 previousState
             }
+
+            is LoginScreenResult.NavigateToForgotPasswordScreen -> {
+                navigationManager.navigate(LogeOnDestinations.ForgotPassword)
+                previousState
+            }
         }
     }
 }
@@ -89,6 +94,7 @@ sealed interface LoginScreenAction {
     data class LoginClick(val email: String, val password: String) : LoginScreenAction
     data class GoogleSignInClick(val context: Context) : LoginScreenAction
     data object NavigateToSignUpClick : LoginScreenAction
+    data object NavigateToForgotPasswordClick : LoginScreenAction
 }
 
 sealed interface LoginScreenEffect
@@ -103,4 +109,5 @@ sealed interface LoginScreenResult {
     data class PasswordValidationError(val error: PasswordValidationResult) : LoginScreenResult
     data class Error(val message: String) : LoginScreenResult
     data object NavigateToSignUpScreen : LoginScreenResult
+    data object NavigateToForgotPasswordScreen : LoginScreenResult
 }
