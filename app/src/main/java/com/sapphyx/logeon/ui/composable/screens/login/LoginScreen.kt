@@ -192,16 +192,13 @@ object LoginScreen :
         isLoading: Boolean,
         processUiAction: (action: LoginScreenAction) -> Unit
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            TextButton(
-                onClick = {
-                    processUiAction(LoginScreenAction.NavigateToForgotPasswordClick)
-                },
-                enabled = !isLoading,
-                modifier = Modifier.align(Alignment.CenterEnd)
-            ) {
-                Text(stringResource(R.string.login_screen_forgot_password))
-            }
+        TextButton(
+            onClick = {
+                processUiAction(LoginScreenAction.NavigateToForgotPasswordClick)
+            },
+            enabled = !isLoading,
+        ) {
+            Text(stringResource(R.string.login_screen_forgot_password))
         }
     }
 
