@@ -6,6 +6,7 @@ import com.sapphyx.logeon.ui.composable.screens.add.AddScreen
 import com.sapphyx.logeon.ui.composable.screens.forgotPassword.ForgotPasswordScreen
 import com.sapphyx.logeon.ui.composable.screens.home.HomeScreen
 import com.sapphyx.logeon.ui.composable.screens.login.LoginScreen
+import com.sapphyx.logeon.ui.composable.screens.onboarding.OnboardingScreen
 import com.sapphyx.logeon.ui.composable.screens.profile.ProfileScreen
 import com.sapphyx.logeon.ui.composable.screens.pulse.PulseScreen
 import com.sapphyx.logeon.ui.composable.screens.signUp.SignUpScreen
@@ -32,6 +33,10 @@ enum class LogeOnDestinations(
         route = DestinationRoutes.RESET_PASSWORD_ROUTE,
         hasBottomNavigation = false,
         content = { ForgotPasswordScreen.Content(hiltViewModel()) }),
+    Onboarding(
+        route = DestinationRoutes.ONBOARDING_ROUTE,
+        hasBottomNavigation = false,
+        content = { OnboardingScreen.Content(hiltViewModel()) }),
     Home(
         route = DestinationRoutes.HOME_ROUTE,
         hasBottomNavigation = true,
@@ -55,6 +60,7 @@ private object DestinationRoutes {
     const val SIGNUP_ROUTE = "signup"
     const val VERIFY_EMAIL_ROUTE = "verify-email"
     const val RESET_PASSWORD_ROUTE = "reset-password"
+    const val ONBOARDING_ROUTE = "onboarding"
     const val HOME_ROUTE = "home"
     const val PULSE_ROUTE = "pulse"
     const val ADD_ROUTE = "add"

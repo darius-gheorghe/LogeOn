@@ -52,4 +52,28 @@
     <string name="forgot_password_screen_success_message">If an account exists for that email address, we\'ve sent a password reset link. Please check your inbox.</string>
     <string name="forgot_password_screen_back_to_login">Back to Sign In</string>
 
+    <!-- Onboarding -->
+    <string name="onboarding_screen_headline">Complete Your Profile</string>
+    <string name="onboarding_screen_subtitle">Choose a unique username and tell us a little about yourself.</string>
+    <string name="onboarding_username_label">Username *</string>
+    <string name="onboarding_username_available">Username is available</string>
+    <string name="onboarding_display_name_label">Display Name (Optional)</string>
+    <string name="onboarding_bio_label">Bio (Optional)</string>
+    <string name="onboarding_dob_label">Date of Birth *</string>
+    <string name="onboarding_dob_select">Select date</string>
+    <string name="onboarding_dob_confirm">OK</string>
+    <string name="onboarding_dob_cancel">Cancel</string>
+    <string name="onboarding_dob_required_error">Please select your date of birth</string>
+    <string name="onboarding_country_label">Country *</string>
+    <string name="onboarding_country_required_error">Please select your country</string>
+    <string name="onboarding_complete_button">Continue</string>
+    <string name="onboarding_sign_out_button">Sign Out</string>
+    <string name="onboarding_error_retry_button">Retry</string>
+
+    <!-- Username Validation -->
+    <string name="error_username_empty">Username cannot be empty</string>
+    <string name="error_username_too_short">Username must be at least 3 characters</string>
+    <string name="error_username_too_long">Username must be at most 20 characters</string>
+    <string name="error_username_invalid_chars">Only lowercase letters, numbers, ., _, and - are allowed</string>
+    <string name="error_username_taken">This username is already taken</string>
 </resources>
