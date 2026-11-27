@@ -126,7 +126,7 @@ class UserRepository @Inject constructor(
             OnboardingResponse.Success
         } catch (e: CancellationException) {
             throw e
-        } catch (e: UsernameTakenException) {
+        } catch (_: UsernameTakenException) {
             OnboardingResponse.UsernameError(UsernameValidationResult.ALREADY_TAKEN)
         } catch (e: Exception) {
             Log.e(LOG_TAG, LOG_COMPLETE_ONBOARDING_ERROR, e)
