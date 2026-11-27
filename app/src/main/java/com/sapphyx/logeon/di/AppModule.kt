@@ -2,9 +2,11 @@ package com.sapphyx.logeon.di
 
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.sapphyx.logeon.data.repository.AuthenticationRepository
 import com.sapphyx.logeon.data.repository.util.authentication.EmailValidator
 import com.sapphyx.logeon.data.repository.util.authentication.PasswordValidator
+import com.sapphyx.logeon.data.repository.util.user.UsernameValidator
 import com.sapphyx.logeon.navigation.NavigationManager
 import dagger.Module
 import dagger.Provides
@@ -56,4 +58,12 @@ class AppModule {
         emailValidator = emailValidator,
         passwordValidator = passwordValidator
     )
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideUsernameValidator(): UsernameValidator = UsernameValidator()
 }

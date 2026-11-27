@@ -35,8 +35,10 @@ import kotlinx.coroutines.tasks.await
 import java.security.MessageDigest
 import java.util.UUID
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
+@Singleton
 class AuthenticationRepository @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val externalScope: CoroutineScope,
