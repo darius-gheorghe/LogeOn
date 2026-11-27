@@ -27,6 +27,7 @@ class ForgotPasswordScreenInteractorTest {
             AuthResponse.Loading,
             AuthResponse.EmailValidationError(EmailValidationResult.EMPTY),
             AuthResponse.Error("Network error"),
+            AuthResponse.Cancelled,
             AuthResponse.Success
         )
 
@@ -38,6 +39,7 @@ class ForgotPasswordScreenInteractorTest {
                     awaitItem()
                 )
                 assertEquals(ForgotPasswordScreenResult.Error("Network error"), awaitItem())
+                assertEquals(ForgotPasswordScreenResult.Cancelled, awaitItem())
                 assertEquals(ForgotPasswordScreenResult.Success, awaitItem())
                 awaitComplete()
             }

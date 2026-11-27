@@ -90,4 +90,24 @@ class ForgotPasswordScreenViewModelTest {
 
         verify(exactly = 1) { navigationManager.navigateBack() }
     }
+
+    @Test
+    fun `Cancelled resets isLoading to false`() = runTest {
+        every {
+            interactor.actionToResult(ForgotPasswordScreenAction.SendResetLinkClick("a@b.com"))
+        } returns flowOf(
+            ForgotPasswordScreenResult.Loading,
+            ForgotPasswordScreenResult.Cancelled
+        )
+
+        val viewModel = ForgotPasswordScreenViewModel(navigationManager, interactor)
+
+        viewModel.uiState.test {
+            assertFalse(awaitItem().isLoading)
+
+            viewModel.processUiAction(ForgotPasswordScreenAction.SendResetLinkClick("a@b.com"))
+            assertTrue(awaitItem().isLoading)
+            assertFalse(awaitItem().isLoading)
+        }
+    }
 }
