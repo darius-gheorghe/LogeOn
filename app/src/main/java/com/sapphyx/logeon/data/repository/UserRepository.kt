@@ -136,6 +136,103 @@ class UserRepository @Inject constructor(
         emit(response)
     }
 
+    fun updateUserProfile(
+        uid: String,
+        oldUsername: String,
+        newUsername: String,
+        displayName: String?,
+        bio: String?,
+        country: String
+    ): Flow<UpdateProfileResponse> = flow {
+        val trimmedNewUsername = newUsername.trim()
+        val trimmedOldUsername = oldUsername.trim()
+        val trimmedCountry = country.trim()
+
+        val usernameResult = usernameValidator(trimmedNewUsername)
+        if (usernameResult != UsernameValidationResult.CORRECT) {
+            emit(UpdateProfileResponse.UsernameError(usernameResult))
+            return@flow
+        }
+
+        if (trimmedCountry.isEmpty()) {
+            emit(UpdateProfileResponse.CountryRequired)
+            return@flow
+        }
+
+        emit(UpdateProfileResponse.Loading)
+
+        val normalizedNew = trimmedNewUsername.lowercase()
+        val normalizedOld = trimmedOldUsername.lowercase()
+        val isUsernameChanged = normalizedNew != normalizedOld
+
+        val newUsernameDocRef = firestore.collection(USERNAMES_COLLECTION).document(normalizedNew)
+        val oldUsernameDocRef = firestore.collection(USERNAMES_COLLECTION).document(normalizedOld)
+        val userDocRef = firestore.collection(USERS_COLLECTION).document(uid)
+
+        val sanitizedDisplayName = displayName?.trim()?.takeIf { it.isNotEmpty() }
+        val sanitizedBio = bio?.trim()?.takeIf { it.isNotEmpty() }
+
+        val response = try {
+            firestore.runTransaction { transaction ->
+                if (isUsernameChanged) {
+                    val existingUsername = transaction.get(newUsernameDocRef)
+                    if (existingUsername.exists()) {
+                        throw UsernameTakenException()
+                    }
+                    transaction.set(newUsernameDocRef, mapOf(FIELD_UID to uid))
+                    if (normalizedOld.isNotEmpty()) {
+                        transaction.delete(oldUsernameDocRef)
+                    }
+                }
+
+                transaction.update(
+                    userDocRef,
+                    mapOf(
+                        FIELD_USERNAME to trimmedNewUsername,
+                        FIELD_DISPLAY_NAME to sanitizedDisplayName,
+                        FIELD_BIO to sanitizedBio,
+                        FIELD_COUNTRY to trimmedCountry
+                    )
+                )
+            }.await()
+
+            UpdateProfileResponse.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: UsernameTakenException) {
+            UpdateProfileResponse.UsernameError(UsernameValidationResult.ALREADY_TAKEN)
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, LOG_UPDATE_PROFILE_ERROR, e)
+            UpdateProfileResponse.Error(e.message ?: DEFAULT_UPDATE_PROFILE_ERROR)
+        }
+
+        emit(response)
+    }
+
+    suspend fun deleteUserData(uid: String, username: String) {
+        try {
+            val normalizedUsername = username.trim().lowercase()
+            val userDocRef = firestore.collection(USERS_COLLECTION).document(uid)
+            val usernameDocRef = if (normalizedUsername.isNotEmpty()) {
+                firestore.collection(USERNAMES_COLLECTION).document(normalizedUsername)
+            } else {
+                null
+            }
+
+            firestore.runTransaction { transaction ->
+                if (usernameDocRef != null) {
+                    transaction.delete(usernameDocRef)
+                }
+                transaction.delete(userDocRef)
+            }.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, LOG_DELETE_USER_DATA_ERROR, e)
+            throw e
+        }
+    }
+
     private class UsernameTakenException : Exception()
 
     private companion object {
@@ -148,6 +245,13 @@ class UserRepository @Inject constructor(
         const val LOG_OBSERVE_PROFILE_ERROR = "Error observing user profile"
         const val LOG_CHECK_USERNAME_ERROR = "Error checking username availability"
         const val LOG_COMPLETE_ONBOARDING_ERROR = "Error completing onboarding"
+        const val FIELD_USERNAME = "username"
+        const val FIELD_DISPLAY_NAME = "displayName"
+        const val FIELD_BIO = "bio"
+        const val FIELD_COUNTRY = "country"
+        const val DEFAULT_UPDATE_PROFILE_ERROR = "Failed to update profile"
+        const val LOG_UPDATE_PROFILE_ERROR = "Error updating user profile"
+        const val LOG_DELETE_USER_DATA_ERROR = "Error deleting user data"
     }
 }
 
@@ -165,4 +269,12 @@ sealed interface OnboardingResponse {
     data object DateOfBirthRequired : OnboardingResponse
     data object CountryRequired : OnboardingResponse
     data class Error(val message: String) : OnboardingResponse
+}
+
+sealed interface UpdateProfileResponse {
+    data object Loading : UpdateProfileResponse
+    data object Success : UpdateProfileResponse
+    data class UsernameError(val error: UsernameValidationResult) : UpdateProfileResponse
+    data object CountryRequired : UpdateProfileResponse
+    data class Error(val message: String) : UpdateProfileResponse
 }

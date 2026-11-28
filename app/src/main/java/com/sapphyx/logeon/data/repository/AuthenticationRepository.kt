@@ -12,6 +12,7 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -198,6 +199,85 @@ class AuthenticationRepository @Inject constructor(
         emit(response)
     }
 
+    fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+        confirmNewPassword: String
+    ): Flow<AccountSecurityResponse> = flow {
+        if (currentPassword.isEmpty()) {
+            emit(AccountSecurityResponse.CurrentPasswordEmpty)
+            return@flow
+        }
+
+        val passwordResult = passwordValidator(newPassword)
+        if (passwordResult != PasswordValidationResult.CORRECT) {
+            emit(AccountSecurityResponse.NewPasswordError(passwordResult))
+            return@flow
+        }
+
+        if (newPassword != confirmNewPassword) {
+            emit(AccountSecurityResponse.PasswordsDoNotMatch)
+            return@flow
+        }
+
+        val user = currentUser
+        val email = user?.email
+        if (user == null || email.isNullOrEmpty()) {
+            emit(AccountSecurityResponse.Error(DEFAULT_AUTH_SESSION_ERROR))
+            return@flow
+        }
+
+        emit(AccountSecurityResponse.Loading)
+
+        val response = try {
+            val credential = EmailAuthProvider.getCredential(email, currentPassword)
+            user.reauthenticate(credential).await()
+            user.updatePassword(newPassword).await()
+            AccountSecurityResponse.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, LOG_CHANGE_PASSWORD_ERROR, e)
+            AccountSecurityResponse.Error(e.message ?: DEFAULT_CHANGE_PASSWORD_ERROR)
+        }
+
+        emit(response)
+    }
+
+    fun deleteAccount(
+        currentPassword: String,
+        onBeforeAuthDelete: suspend (uid: String) -> Unit
+    ): Flow<AccountSecurityResponse> = flow {
+        if (currentPassword.isEmpty()) {
+            emit(AccountSecurityResponse.CurrentPasswordEmpty)
+            return@flow
+        }
+
+        val user = currentUser
+        val email = user?.email
+        if (user == null || email.isNullOrEmpty()) {
+            emit(AccountSecurityResponse.Error(DEFAULT_AUTH_SESSION_ERROR))
+            return@flow
+        }
+
+        emit(AccountSecurityResponse.Loading)
+
+        val response = try {
+            val credential = EmailAuthProvider.getCredential(email, currentPassword)
+            user.reauthenticate(credential).await()
+            onBeforeAuthDelete(user.uid)
+            user.delete().await()
+            AccountSecurityResponse.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, LOG_DELETE_ACCOUNT_ERROR, e)
+            AccountSecurityResponse.Error(e.message ?: DEFAULT_DELETE_ACCOUNT_ERROR)
+        }
+
+        emit(response)
+    }
+
     fun signOut() {
         auth.signOut()
 
@@ -285,7 +365,11 @@ class AuthenticationRepository @Inject constructor(
 
         const val PASSWORD_RESET_DEFAULT_ERROR = "Send password reset email - default error"
         const val LOG_PASSWORD_RESET_EXCEPTION_MESSAGE = "Send password reset email exception"
-
+        const val DEFAULT_AUTH_SESSION_ERROR = "User session expired. Please sign in again."
+        const val DEFAULT_CHANGE_PASSWORD_ERROR = "Failed to change password"
+        const val DEFAULT_DELETE_ACCOUNT_ERROR = "Failed to delete account"
+        const val LOG_CHANGE_PASSWORD_ERROR = "Error changing password"
+        const val LOG_DELETE_ACCOUNT_ERROR = "Error deleting account"
     }
 }
 
@@ -302,4 +386,13 @@ sealed interface AuthResponse {
     data class Error(val message: String) : AuthResponse
     data class EmailValidationError(val validationError: EmailValidationResult) : AuthResponse
     data class PasswordValidationError(val validationError: PasswordValidationResult) : AuthResponse
+}
+
+sealed interface AccountSecurityResponse {
+    data object Loading : AccountSecurityResponse
+    data object Success : AccountSecurityResponse
+    data object CurrentPasswordEmpty : AccountSecurityResponse
+    data class NewPasswordError(val error: PasswordValidationResult) : AccountSecurityResponse
+    data object PasswordsDoNotMatch : AccountSecurityResponse
+    data class Error(val message: String) : AccountSecurityResponse
 }

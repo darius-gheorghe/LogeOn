@@ -12,6 +12,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Transaction
 import com.sapphyx.logeon.data.model.UserProfile
 import com.sapphyx.logeon.data.repository.OnboardingResponse
+import com.sapphyx.logeon.data.repository.UpdateProfileResponse
 import com.sapphyx.logeon.data.repository.UserProfileState
 import com.sapphyx.logeon.data.repository.UserRepository
 import com.sapphyx.logeon.data.repository.util.user.UsernameValidationResult
@@ -301,4 +302,213 @@ class UserRepositoryTest {
             awaitComplete()
         }
     }
+
+    // --- updateUserProfile ---
+
+    @Test
+    fun `updateUserProfile emits validation errors before touching Firestore`() = runTest {
+        every { usernameValidator("ab") } returns UsernameValidationResult.TOO_SHORT
+        repository.updateUserProfile("uid-1", "alex", "ab", null, null, "Romania")
+            .test {
+                assertEquals(
+                    UpdateProfileResponse.UsernameError(UsernameValidationResult.TOO_SHORT),
+                    awaitItem()
+                )
+                awaitComplete()
+            }
+
+        every { usernameValidator("alex") } returns UsernameValidationResult.CORRECT
+        repository.updateUserProfile("uid-1", "alex", "alex", null, null, "   ")
+            .test {
+                assertEquals(UpdateProfileResponse.CountryRequired, awaitItem())
+                awaitComplete()
+            }
+    }
+
+    @Test
+    fun `updateUserProfile updates user document without touching usernames when username is unchanged`() =
+        runTest {
+            val usernamesCollection: CollectionReference = mockk()
+            val usersCollection: CollectionReference = mockk()
+            val newUsernameDocRef: DocumentReference = mockk()
+            val userDocRef: DocumentReference = mockk()
+            val transaction: Transaction = mockk(relaxed = true)
+            val txFunctionSlot = slot<Transaction.Function<Any?>>()
+            val txTask: Task<Any?> = mockk()
+
+            every { usernameValidator("alex") } returns UsernameValidationResult.CORRECT
+            every { firestore.collection("usernames") } returns usernamesCollection
+            every { usernamesCollection.document("alex") } returns newUsernameDocRef
+            every { firestore.collection("users") } returns usersCollection
+            every { usersCollection.document("uid-1") } returns userDocRef
+
+            every { firestore.runTransaction(capture(txFunctionSlot)) } answers {
+                txFunctionSlot.captured.apply(transaction)
+                txTask
+            }
+            coEvery { txTask.await() } returns Unit
+
+            repository.updateUserProfile(
+                uid = "uid-1",
+                oldUsername = "alex",
+                newUsername = "alex",
+                displayName = "  Alex Updated ",
+                bio = "  ",
+                country = "Romania"
+            ).test {
+                assertEquals(UpdateProfileResponse.Loading, awaitItem())
+                assertEquals(UpdateProfileResponse.Success, awaitItem())
+                awaitComplete()
+            }
+
+            verify(exactly = 0) { transaction.get(any()) }
+            verify(exactly = 0) { transaction.set(any(), any()) }
+            verify(exactly = 0) { transaction.delete(any()) }
+            verify(exactly = 1) {
+                transaction.update(
+                    userDocRef,
+                    mapOf(
+                        "username" to "alex",
+                        "displayName" to "Alex Updated",
+                        "bio" to null,
+                        "country" to "Romania"
+                    )
+                )
+            }
+        }
+
+    @Test
+    fun `updateUserProfile swaps username reservations atomically when username changes`() =
+        runTest {
+            val usernamesCollection: CollectionReference = mockk()
+            val usersCollection: CollectionReference = mockk()
+            val newUsernameDocRef: DocumentReference = mockk()
+            val oldUsernameDocRef: DocumentReference = mockk()
+            val userDocRef: DocumentReference = mockk()
+            val transaction: Transaction = mockk(relaxed = true)
+            val newUsernameSnapshot: DocumentSnapshot = mockk {
+                every { exists() } returns false
+            }
+            val txFunctionSlot = slot<Transaction.Function<Any?>>()
+            val txTask: Task<Any?> = mockk()
+
+            every { usernameValidator("alex_new") } returns UsernameValidationResult.CORRECT
+            every { firestore.collection("usernames") } returns usernamesCollection
+            every { usernamesCollection.document("alex_new") } returns newUsernameDocRef
+            every { usernamesCollection.document("alex_old") } returns oldUsernameDocRef
+            every { firestore.collection("users") } returns usersCollection
+            every { usersCollection.document("uid-1") } returns userDocRef
+            every { transaction.get(newUsernameDocRef) } returns newUsernameSnapshot
+
+            every { firestore.runTransaction(capture(txFunctionSlot)) } answers {
+                txFunctionSlot.captured.apply(transaction)
+                txTask
+            }
+            coEvery { txTask.await() } returns Unit
+
+            repository.updateUserProfile(
+                uid = "uid-1",
+                oldUsername = "alex_old",
+                newUsername = "alex_new",
+                displayName = "Alex",
+                bio = "Hello",
+                country = "Germany"
+            ).test {
+                assertEquals(UpdateProfileResponse.Loading, awaitItem())
+                assertEquals(UpdateProfileResponse.Success, awaitItem())
+                awaitComplete()
+            }
+
+            verify(exactly = 1) { transaction.set(newUsernameDocRef, mapOf("uid" to "uid-1")) }
+            verify(exactly = 1) { transaction.delete(oldUsernameDocRef) }
+            verify(exactly = 1) {
+                transaction.update(
+                    userDocRef,
+                    mapOf(
+                        "username" to "alex_new",
+                        "displayName" to "Alex",
+                        "bio" to "Hello",
+                        "country" to "Germany"
+                    )
+                )
+            }
+        }
+
+    @Test
+    fun `updateUserProfile emits UsernameError ALREADY_TAKEN when new username exists`() =
+        runTest {
+            val usernamesCollection: CollectionReference = mockk()
+            val usersCollection: CollectionReference = mockk()
+            val newUsernameDocRef: DocumentReference = mockk()
+            val oldUsernameDocRef: DocumentReference = mockk()
+            val userDocRef: DocumentReference = mockk()
+            val transaction: Transaction = mockk(relaxed = true)
+            val newUsernameSnapshot: DocumentSnapshot = mockk {
+                every { exists() } returns true
+            }
+            val txFunctionSlot = slot<Transaction.Function<Any?>>()
+            val txTask: Task<Any?> = mockk()
+
+            every { usernameValidator("taken_name") } returns UsernameValidationResult.CORRECT
+            every { firestore.collection("usernames") } returns usernamesCollection
+            every { usernamesCollection.document("taken_name") } returns newUsernameDocRef
+            every { usernamesCollection.document("alex_old") } returns oldUsernameDocRef
+            every { firestore.collection("users") } returns usersCollection
+            every { usersCollection.document("uid-1") } returns userDocRef
+            every { transaction.get(newUsernameDocRef) } returns newUsernameSnapshot
+
+            every { firestore.runTransaction(capture(txFunctionSlot)) } answers {
+                txFunctionSlot.captured.apply(transaction)
+                txTask
+            }
+            coEvery { txTask.await() } returns Unit
+
+            repository.updateUserProfile(
+                uid = "uid-1",
+                oldUsername = "alex_old",
+                newUsername = "taken_name",
+                displayName = null,
+                bio = null,
+                country = "Romania"
+            ).test {
+                assertEquals(UpdateProfileResponse.Loading, awaitItem())
+                assertEquals(
+                    UpdateProfileResponse.UsernameError(UsernameValidationResult.ALREADY_TAKEN),
+                    awaitItem()
+                )
+                awaitComplete()
+            }
+
+            verify(exactly = 0) { transaction.delete(oldUsernameDocRef) }
+        }
+
+    // --- deleteUserData ---
+
+    @Test
+    fun `deleteUserData deletes both username reservation and user profile in transaction`() =
+        runTest {
+            val usernamesCollection: CollectionReference = mockk()
+            val usersCollection: CollectionReference = mockk()
+            val usernameDocRef: DocumentReference = mockk()
+            val userDocRef: DocumentReference = mockk()
+            val transaction: Transaction = mockk(relaxed = true)
+            val txFunctionSlot = slot<Transaction.Function<Transaction>>()
+            val txTask: Task<Transaction> = mockk()
+
+            every { firestore.collection("usernames") } returns usernamesCollection
+            every { usernamesCollection.document("alex") } returns usernameDocRef
+            every { firestore.collection("users") } returns usersCollection
+            every { usersCollection.document("uid-1") } returns userDocRef
+
+            every { firestore.runTransaction(capture(txFunctionSlot)) } answers {
+                txFunctionSlot.captured.apply(transaction)
+                txTask
+            }
+            coEvery { txTask.await() } returns transaction
+
+            repository.deleteUserData(uid = "uid-1", username = "Alex")
+
+            verify(exactly = 1) { transaction.delete(usernameDocRef) }
+            verify(exactly = 1) { transaction.delete(userDocRef) }
+        }
 }

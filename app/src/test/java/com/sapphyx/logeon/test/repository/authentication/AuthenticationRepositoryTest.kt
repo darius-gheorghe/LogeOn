@@ -14,10 +14,12 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.sapphyx.logeon.R
+import com.sapphyx.logeon.data.repository.AccountSecurityResponse
 import com.sapphyx.logeon.data.repository.AuthResponse
 import com.sapphyx.logeon.data.repository.AuthStatus
 import com.sapphyx.logeon.data.repository.AuthenticationRepository
@@ -65,6 +67,7 @@ class AuthenticationRepositoryTest {
         mockkObject(CredentialManager.Companion)
         mockkObject(GoogleIdTokenCredential.Companion)
         mockkStatic(GoogleAuthProvider::class)
+        mockkStatic(EmailAuthProvider::class)
 
         repository = AuthenticationRepository(
             appContext = appContext,
@@ -81,6 +84,7 @@ class AuthenticationRepositoryTest {
         unmockkObject(CredentialManager.Companion)
         unmockkObject(GoogleIdTokenCredential.Companion)
         unmockkStatic(GoogleAuthProvider::class)
+        unmockkStatic(EmailAuthProvider::class)
     }
 
     // --- currentUser ---
@@ -422,5 +426,153 @@ class AuthenticationRepositoryTest {
         repository.signOut()
 
         verify(exactly = 1) { firebaseAuth.signOut() }
+    }
+
+    // --- changePassword ---
+
+    @Test
+    fun `changePassword emits validation errors before calling Firebase`() = runTest {
+        repository.changePassword("", "NewPass1!", "NewPass1!").test {
+            assertEquals(AccountSecurityResponse.CurrentPasswordEmpty, awaitItem())
+            awaitComplete()
+        }
+
+        every { passwordValidator("weak") } returns PasswordValidationResult.TOO_SHORT
+        repository.changePassword("OldPass1!", "weak", "weak").test {
+            assertEquals(
+                AccountSecurityResponse.NewPasswordError(PasswordValidationResult.TOO_SHORT),
+                awaitItem()
+            )
+            awaitComplete()
+        }
+
+        every { passwordValidator("NewPass1!") } returns PasswordValidationResult.CORRECT
+        repository.changePassword("OldPass1!", "NewPass1!", "Mismatch1!").test {
+            assertEquals(AccountSecurityResponse.PasswordsDoNotMatch, awaitItem())
+            awaitComplete()
+        }
+    }
+
+    @Test
+    fun `changePassword emits Error when currentUser is null`() = runTest {
+        every { passwordValidator("NewPass1!") } returns PasswordValidationResult.CORRECT
+        every { firebaseAuth.currentUser } returns null
+
+        repository.changePassword("OldPass1!", "NewPass1!", "NewPass1!").test {
+            assertEquals(
+                AccountSecurityResponse.Error("User session expired. Please sign in again."),
+                awaitItem()
+            )
+            awaitComplete()
+        }
+    }
+
+    @Test
+    fun `changePassword reauthenticates and updates password successfully`() = runTest {
+        val mockUser: FirebaseUser = mockk {
+            every { email } returns "user@logeon.com"
+        }
+        val credential: AuthCredential = mockk()
+        val reauthorizeTask: Task<Void> = mockk()
+        val updateTask: Task<Void> = mockk()
+
+        every { passwordValidator("NewPass1!") } returns PasswordValidationResult.CORRECT
+        every { firebaseAuth.currentUser } returns mockUser
+        every { EmailAuthProvider.getCredential("user@logeon.com", "OldPass1!") } returns credential
+        every { mockUser.reauthenticate(credential) } returns reauthorizeTask
+        every { mockUser.updatePassword("NewPass1!") } returns updateTask
+        coEvery { reauthorizeTask.await() } returns mockk()
+        coEvery { updateTask.await() } returns mockk()
+
+        repository.changePassword("OldPass1!", "NewPass1!", "NewPass1!").test {
+            assertEquals(AccountSecurityResponse.Loading, awaitItem())
+            assertEquals(AccountSecurityResponse.Success, awaitItem())
+            awaitComplete()
+        }
+    }
+
+    @Test
+    fun `changePassword emits Error when reauthentication fails`() = runTest {
+        val mockUser: FirebaseUser = mockk {
+            every { email } returns "user@logeon.com"
+        }
+        val credential: AuthCredential = mockk()
+        val reauthorizeTask: Task<Void> = mockk()
+
+        every { passwordValidator("NewPass1!") } returns PasswordValidationResult.CORRECT
+        every { firebaseAuth.currentUser } returns mockUser
+        every { EmailAuthProvider.getCredential("user@logeon.com", "WrongPass!") } returns credential
+        every { mockUser.reauthenticate(credential) } returns reauthorizeTask
+        coEvery { reauthorizeTask.await() } throws RuntimeException("The password is invalid")
+
+        repository.changePassword("WrongPass!", "NewPass1!", "NewPass1!").test {
+            assertEquals(AccountSecurityResponse.Loading, awaitItem())
+            assertEquals(AccountSecurityResponse.Error("The password is invalid"), awaitItem())
+            awaitComplete()
+        }
+    }
+
+    // --- deleteAccount ---
+
+    @Test
+    fun `deleteAccount emits CurrentPasswordEmpty when password is blank`() = runTest {
+        repository.deleteAccount("") {}.test {
+            assertEquals(AccountSecurityResponse.CurrentPasswordEmpty, awaitItem())
+            awaitComplete()
+        }
+    }
+
+    @Test
+    fun `deleteAccount reauthenticates, invokes cleanup callback, and deletes user`() = runTest {
+        val mockUser: FirebaseUser = mockk {
+            every { uid } returns "uid-1"
+            every { email } returns "user@logeon.com"
+        }
+        val credential: AuthCredential = mockk()
+        val reauthTask: Task<Void> = mockk()
+        val deleteTask: Task<Void> = mockk()
+        var cleanedUpUid: String? = null
+
+        every { firebaseAuth.currentUser } returns mockUser
+        every { EmailAuthProvider.getCredential("user@logeon.com", "Pass123!") } returns credential
+        every { mockUser.reauthenticate(credential) } returns reauthTask
+        every { mockUser.delete() } returns deleteTask
+        coEvery { reauthTask.await() } returns mockk()
+        coEvery { deleteTask.await() } returns mockk()
+
+        repository.deleteAccount("Pass123!") { uid ->
+            cleanedUpUid = uid
+        }.test {
+            assertEquals(AccountSecurityResponse.Loading, awaitItem())
+            assertEquals(AccountSecurityResponse.Success, awaitItem())
+            awaitComplete()
+        }
+
+        assertEquals("uid-1", cleanedUpUid)
+    }
+
+    @Test
+    fun `deleteAccount aborts user deletion if cleanup callback throws`() = runTest {
+        val mockUser: FirebaseUser = mockk {
+            every { uid } returns "uid-1"
+            every { email } returns "user@logeon.com"
+        }
+        val credential: AuthCredential = mockk()
+        val reauthorizeTask: Task<Void> = mockk()
+
+        every { firebaseAuth.currentUser } returns mockUser
+        every { EmailAuthProvider.getCredential("user@logeon.com", "Pass123!") } returns credential
+        every { mockUser.reauthenticate(credential) } returns reauthorizeTask
+        coEvery { reauthorizeTask.await() } returns mockk()
+
+        repository.deleteAccount("Pass123!") {
+            throw RuntimeException("Firestore cleanup failed")
+        }.test {
+            assertEquals(AccountSecurityResponse.Loading, awaitItem())
+            assertEquals(AccountSecurityResponse.Error("Firestore cleanup failed"), awaitItem())
+            awaitComplete()
+        }
+
+        verify(exactly = 0) { mockUser.delete() }
     }
 }
