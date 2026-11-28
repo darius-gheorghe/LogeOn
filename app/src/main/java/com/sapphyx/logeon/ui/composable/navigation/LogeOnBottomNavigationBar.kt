@@ -1,6 +1,7 @@
 package com.sapphyx.logeon.ui.composable.navigation
 
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -28,7 +29,6 @@ fun LogeOnBottomNavigationBar(
     NavigationBar(
         containerColor = Color.Transparent
     ) {
-
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
@@ -46,11 +46,11 @@ fun LogeOnBottomNavigationBar(
                 },
                 selected = item.route == currentRoute,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.DarkGray,
-                    unselectedTextColor = Color.Gray,
-                    selectedTextColor = Color.DarkGray,
-                    unselectedIconColor = Color.Gray,
-                    indicatorColor = Color.White,
+                    selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 onClick = {
                     action(item)
